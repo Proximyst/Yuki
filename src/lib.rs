@@ -145,7 +145,6 @@ pub extern "stdcall" fn DllMain(
                     std::ptr::null_mut(),
                 );
             }
-            return true as i32;
         }
         winapi::um::winnt::DLL_PROCESS_DETACH => {
             if !lpv_reserved.is_null() {
@@ -161,9 +160,9 @@ pub extern "stdcall" fn DllMain(
                     },
                 }
             }
-
-            return true as i32;
         }
-        _ => true as i32,
+        _ => {}
     }
+
+    true as i32
 }
