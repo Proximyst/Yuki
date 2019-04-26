@@ -1,0 +1,13 @@
+= Yuki
+Mariell Hoversholm <proximyst@proximyst.com>
+v1.0
+:homepage: https://github.com/Proximyst/Yuki
+
+Yuki is a basic CS:GO 'cheat' written in https://rust-lang.org[Rust].
+In its current state, it serves no more purpose than being a basic base for
+further development.
+
+== Licence
+
+The project is licensed under the link:LICENCE[BSD 3-Clause Licence], and is as
+such free software.

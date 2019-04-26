@@ -1,0 +1,19 @@
+[package]
+name = "yuki"
+version = "0.1.0"
+authors = ["Mariell Hoversholm <proximyst@proximyst.com>"]
+edition = "2018"
+
+[dependencies]
+imgui = "^0.0"
+winapi = { version = "^0.3", features = ["std", "everything"] }
+libc = { version = "^0.2", features = ["use_std", "extra_traits"] }
+getset = "^0.0"
+failure = "^0.1"
+
+log = "^0.4"
+simplelog = "^0.5"
+
+[lib]
+name = "yuki"
+crate-type = ["cdylib"]

@@ -1,0 +1,6 @@
+# CS:GO is still built with i686.
+# Thus injecting it requires an i686 cheat DLL.
+# WoW64 will handle it like usual CS:GO for x86-64 computers. 
+
+[build]
+target = "i686-pc-windows-msvc"
