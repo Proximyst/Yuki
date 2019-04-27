@@ -49,6 +49,7 @@ fn dll_attach(thread_param: winapi::shared::minwindef::LPVOID) -> Result<()> {
     // Fetch a GameProcess of CS:GO.
     let mut process = self::process::GameProcess::current_process();
     debug!("this was injected by the crab gang!");
+    debug!("Using HazeDumper data with offset: {}", self::hazedumper::HAZEDUMPER.timestamp);
     debug!("GameProcess::pid() => {}", process.pid());
 
     // Fetch the client_panorama module from CS:GO.
