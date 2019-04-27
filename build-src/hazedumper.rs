@@ -78,3 +78,8 @@ macro_rules! hazedump {
 hazedump! {
     {toml}
 }
+
+/// A static instance containing the signatures and netvars as fetched by
+/// HazeDumper and placed inside the `/build-src/hazedumper_csgo.toml` file by
+/// `/fetch-hazedumper.sh`.
+pub static HAZEDUMPER: self::HazeDumper = self::HazeDumper::new();
