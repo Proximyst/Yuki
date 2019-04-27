@@ -135,6 +135,7 @@ unsafe extern "system" fn dll_attach_wrapper(base: winapi::shared::minwindef::LP
     unreachable!()
 }
 
+#[allow(unused_attributes)] // RLS yells at me during debug mode
 #[no_mangle]
 pub extern "stdcall" fn DllMain(
     hinst_dll: winapi::shared::minwindef::HINSTANCE,
