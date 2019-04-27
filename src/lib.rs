@@ -5,9 +5,9 @@ compile_error!("this only works for windows");
 
 pub mod consts;
 pub mod error;
+pub mod hazedumper;
 pub mod process;
 pub mod sdk;
-pub mod hazedumper;
 
 use self::prelude::*;
 use log::{debug, info, trace};
@@ -134,19 +134,17 @@ pub extern "stdcall" fn DllMain(
     lpv_reserved: winapi::shared::minwindef::LPVOID,
 ) -> i32 {
     match fdw_reason {
-        winapi::um::winnt::DLL_PROCESS_ATTACH => {
-            unsafe {
-                winapi::um::libloaderapi::DisableThreadLibraryCalls(hinst_dll);
-                winapi::um::processthreadsapi::CreateThread(
-                    std::ptr::null_mut(),
-                    0,
-                    Some(dll_attach_wrapper),
-                    hinst_dll as _,
-                    0,
-                    std::ptr::null_mut(),
-                );
-            }
-        }
+        winapi::um::winnt::DLL_PROCESS_ATTACH => unsafe {
+            winapi::um::libloaderapi::DisableThreadLibraryCalls(hinst_dll);
+            winapi::um::processthreadsapi::CreateThread(
+                std::ptr::null_mut(),
+                0,
+                Some(dll_attach_wrapper),
+                hinst_dll as _,
+                0,
+                std::ptr::null_mut(),
+            );
+        },
         winapi::um::winnt::DLL_PROCESS_DETACH => {
             if !lpv_reserved.is_null() {
                 match std::panic::catch_unwind(|| dll_detach()) {

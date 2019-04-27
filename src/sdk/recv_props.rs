@@ -1,6 +1,7 @@
 pub type RecvVarProxyFn = fn(*const CRecvProxyData, *mut libc::c_void, *mut libc::c_void);
 pub type ArrayLengthRecvProxyFn = fn(*mut libc::c_void, i32, i32);
-pub type DataTableRecvVarProxyFn = fn(*const RecvProp, *mut *mut libc::c_void, *mut libc::c_void, i32);
+pub type DataTableRecvVarProxyFn =
+    fn(*const RecvProp, *mut *mut libc::c_void, *mut libc::c_void, i32);
 
 #[repr(i32)]
 pub enum SendPropType {

@@ -64,7 +64,10 @@ impl EngineInterface {
         type Func = unsafe extern "thiscall" fn(*const usize, *const libc::c_char) -> ();
         let command = format!("{}\0", command);
         unsafe {
-            transmute::<_, Func>(self.inner.nth(108)?)(*self.inner.handle(), command.as_ptr() as *const _);
+            transmute::<_, Func>(self.inner.nth(108)?)(
+                *self.inner.handle(),
+                command.as_ptr() as *const _,
+            );
         }
 
         Ok(())
@@ -74,7 +77,11 @@ impl EngineInterface {
         type Func = unsafe extern "thiscall" fn(*const usize, *const libc::c_char, u8) -> ();
         let command = format!("{}\0", command);
         unsafe {
-            transmute::<_, Func>(self.inner.nth(114)?)(*self.inner.handle(), command.as_ptr() as *const _, 1);
+            transmute::<_, Func>(self.inner.nth(114)?)(
+                *self.inner.handle(),
+                command.as_ptr() as *const _,
+                1,
+            );
         }
 
         Ok(())

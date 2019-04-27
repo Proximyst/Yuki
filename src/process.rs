@@ -153,7 +153,8 @@ impl Module {
 
     pub unsafe fn pattern_scan(&mut self, bytes: &[Option<u8>]) -> Option<*mut u8> {
         let dos_header = self.handle as winnt::PIMAGE_DOS_HEADER;
-        let nt_headers = (self.handle as *const u8).offset((*dos_header).e_lfanew as _) as winnt::PIMAGE_NT_HEADERS;
+        let nt_headers = (self.handle as *const u8).offset((*dos_header).e_lfanew as _)
+            as winnt::PIMAGE_NT_HEADERS;
         let image_size = (*nt_headers).OptionalHeader.SizeOfImage;
 
         let scan_bytes = self.handle as *mut u8;
