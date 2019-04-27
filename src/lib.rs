@@ -25,6 +25,7 @@ fn dll_attach(thread_param: winapi::shared::minwindef::LPVOID) -> Result<()> {
         // twice, this will NOT fail and will simply gracefully return,
         // allowing us to continue loading.
         winapi::um::consoleapi::AllocConsole();
+        winapi::um::wincon::SetConsoleTitleA("Yuki Console\0".as_ptr() as *const _);
     }
 
     // Make sure we know the console works.
@@ -93,6 +94,12 @@ fn dll_attach(thread_param: winapi::shared::minwindef::LPVOID) -> Result<()> {
 fn dll_detach() -> Result<()> {
     info!("Detachment has been called.");
 
+    if !cfg!(debug_assertions) {
+        unsafe {
+            winapi::um::wincon::FreeConsole();
+        }
+    }
+
     Ok(())
 }
 
@@ -100,8 +107,8 @@ unsafe extern "system" fn dll_attach_wrapper(base: winapi::shared::minwindef::LP
     use std::panic;
 
     match panic::catch_unwind(|| dll_attach(base)) {
-        Err(e) => {
-            eprintln!("`dll_attach` has panicked: {:#?}", e);
+        Err(_) => {
+            eprintln!("`dll_attach` has panicked");
         }
         Ok(r) => match r {
             Ok(()) => {}
@@ -112,8 +119,8 @@ unsafe extern "system" fn dll_attach_wrapper(base: winapi::shared::minwindef::LP
     }
 
     match panic::catch_unwind(|| dll_detach()) {
-        Err(e) => {
-            eprintln!("`dll_detach` has panicked: {:#?}", e);
+        Err(_) => {
+            eprintln!("`dll_detach` has panicked");
         }
         Ok(r) => match r {
             Ok(()) => {}
