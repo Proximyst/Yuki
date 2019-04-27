@@ -163,16 +163,19 @@ impl Module {
 
         for i in 0..(image_size as usize - bytes_len) {
             let mut found = true;
+
             for j in 0..bytes_len {
                 let byte = match bytes[j] {
                     None => continue,
                     Some(s) => s,
                 };
+
                 if *scan_bytes.offset((i + j) as isize) != byte {
                     found = false;
                     break;
                 }
             }
+
             if found {
                 return Some(scan_bytes.offset(i as isize));
             }
