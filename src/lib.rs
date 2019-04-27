@@ -1,4 +1,4 @@
-#![feature(abi_thiscall)]
+#![feature(abi_thiscall, decl_macro)]
 
 #[cfg(not(target_os = "windows"))]
 compile_error!("this only works for windows");
