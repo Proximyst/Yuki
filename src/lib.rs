@@ -7,6 +7,7 @@ pub mod consts;
 pub mod error;
 pub mod process;
 pub mod sdk;
+pub mod hazedumper;
 
 use self::prelude::*;
 use log::{debug, info, trace};
