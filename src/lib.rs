@@ -118,7 +118,7 @@ unsafe extern "system" fn dll_attach_wrapper(base: winapi::shared::minwindef::LP
         },
     }
 
-    match panic::catch_unwind(|| dll_detach()) {
+    match panic::catch_unwind(dll_detach) {
         Err(_) => {
             eprintln!("`dll_detach` has panicked");
         }
