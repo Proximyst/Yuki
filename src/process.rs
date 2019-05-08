@@ -29,9 +29,11 @@ pub struct Module {
 
 #[derive(Getters, Clone, Copy, Debug)]
 #[get = "pub"]
-#[repr(transparent)]
 pub struct Interface {
     handle: *const usize,
+    own_table: *const usize,
+    original_table: *const usize,
+    methods: usize,
 }
 
 impl GameProcess {
@@ -186,8 +188,25 @@ impl Module {
 }
 
 impl Interface {
-    pub const fn new(ptr: *const usize) -> Self {
-        Interface { handle: ptr }
+    pub fn new(ptr: *const usize) -> Self {
+        let vtable = unsafe { *ptr as *const usize };
+        let methods = {
+            let mut count = 0;
+            while !unsafe { vtable.offset(count).read() as *const usize }.is_null() {
+                count += 1;
+            }
+            count as usize
+        };
+
+        let own_table = Vec::with_capacity(methods).as_mut_ptr();
+        unsafe { ptr::copy_nonoverlapping(vtable, own_table, methods); }
+
+        Interface {
+            handle: ptr,
+            original_table: ptr,
+            own_table,
+            methods,
+        }
     }
 
     pub fn vtable(&self) -> *const usize {
@@ -202,5 +221,27 @@ impl Interface {
         }
 
         Ok(func)
+    }
+
+    pub fn apply_vmt(&self) {
+        unsafe {
+            ptr::write(self.handle as *mut _, self.own_table);
+        }
+    }
+
+    pub fn release_vmt(&self) {
+        unsafe {
+            ptr::write(self.handle as *mut _, self.original_table);
+        }
+    }
+
+    pub fn hook_vfunc(&self, func: *const usize, index: isize) -> Result<()> {
+        if index as usize > self.methods {
+            return Err(InterfaceErrorKind::InvalidVFuncIndex(index).into());
+        }
+        unsafe {
+            ptr::write(self.own_table.offset(index) as *mut _, func);
+        }
+        Ok(())
     }
 }
