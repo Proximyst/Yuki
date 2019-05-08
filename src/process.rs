@@ -214,13 +214,13 @@ impl Interface {
     }
 
     pub fn nth(&self, index: isize) -> Result<*const usize> {
-        let func = unsafe { self.vtable().offset(index).read() as *const usize };
-
-        if func.is_null() {
+        if index as usize > self.methods {
             return Err(InterfaceErrorKind::InvalidVFuncIndex(index).into());
         }
 
-        Ok(func)
+        Ok(unsafe {
+            self.vtable().offset(index).read() as *const usize
+        })
     }
 
     pub fn apply_vmt(&self) {
