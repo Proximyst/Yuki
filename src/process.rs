@@ -1,6 +1,6 @@
 use super::prelude::*;
 use getset::Getters;
-use std::{mem, ptr};
+use std::{mem, ptr, convert::{AsRef, AsMut}, ops::Deref, borrow::{Borrow, BorrowMut}};
 use winapi::{
     shared::minwindef,
     um::{libloaderapi, processthreadsapi, winnt},
@@ -31,8 +31,6 @@ pub struct Module {
 #[get = "pub"]
 pub struct Interface {
     handle: *const usize,
-    own_table: *const usize,
-    original_table: *const usize,
     methods: usize,
 }
 
@@ -198,13 +196,8 @@ impl Interface {
             count as usize
         };
 
-        let own_table = Vec::with_capacity(methods).as_mut_ptr();
-        unsafe { ptr::copy_nonoverlapping(vtable, own_table, methods); }
-
         Interface {
             handle: ptr,
-            original_table: ptr,
-            own_table,
             methods,
         }
     }
@@ -238,21 +231,44 @@ impl Interface {
             self.vtable().offset(index).read() as *const usize
         })
     }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct VmtInterface {
+    inner: Interface,
+    own_table: *const usize,
+    original_table: *const usize,
+}
+
+impl VmtInterface {
+    pub fn new(inner: Interface) -> VmtInterface {
+        let vtable = inner.vtable();
+        let methods = *inner.methods();
+
+        let own_table = Vec::with_capacity(methods).as_mut_ptr();
+        unsafe { ptr::copy_nonoverlapping(vtable, own_table, methods); }
+
+        VmtInterface {
+            inner,
+            own_table,
+            original_table: vtable,
+        }
+    }
 
     pub fn apply_vmt(&self) {
         unsafe {
-            ptr::write(self.handle as *mut _, self.own_table);
+            ptr::write((*self.inner.handle()) as *mut _, self.own_table);
         }
     }
 
     pub fn release_vmt(&self) {
         unsafe {
-            ptr::write(self.handle as *mut _, self.original_table);
+            ptr::write((*self.inner.handle()) as *mut _, self.original_table);
         }
     }
 
     pub fn hook_vfunc(&self, func: *const usize, index: isize) -> Result<()> {
-        if index as usize > self.methods {
+        if index as usize > *self.inner.methods() {
             return Err(InterfaceErrorKind::InvalidVFuncIndex(index).into());
         }
         unsafe {
@@ -261,3 +277,38 @@ impl Interface {
         Ok(())
     }
 }
+
+impl AsRef<Interface> for VmtInterface {
+    fn as_ref(&self) -> &Interface {
+        &self.inner
+    }
+}
+
+impl AsMut<Interface> for VmtInterface {
+    fn as_mut(&mut self) -> &mut Interface {
+        &mut self.inner
+    }
+}
+
+impl Deref for VmtInterface {
+    type Target = Interface;
+
+    fn deref(&self) -> &Interface {
+        self.as_ref()
+    }
+}
+
+impl Borrow<Interface> for VmtInterface {
+    fn borrow(&self) -> &Interface {
+        self.as_ref()
+    }
+}
+
+impl BorrowMut<Interface> for VmtInterface {
+    fn borrow_mut(&mut self) -> &mut Interface {
+        self.as_mut()
+    }
+}
+
+unsafe impl Sync for VmtInterface {}
+unsafe impl Send for VmtInterface {}
