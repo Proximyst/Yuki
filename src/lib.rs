@@ -11,7 +11,6 @@ pub mod sdk;
 
 use self::prelude::*;
 use log::{debug, info, trace};
-use simplelog::{CombinedLogger, Config as LogConfig, LevelFilter, TermLogger};
 
 pub mod prelude {
     pub use super::error::*;
@@ -29,18 +28,21 @@ fn dll_attach() -> Result<()> {
     // Make sure we know the console works.
     println!("Allocated console; making logger...");
 
-    // Create the logger and initialise it.
-    CombinedLogger::init(vec![TermLogger::new(
-        if cfg!(debug_assertions) {
-            // Trace mode for debug compile
-            LevelFilter::Trace
-        } else {
-            // Info mode for release compile
-            LevelFilter::Info
-        },
-        LogConfig::default(),
-    )
-    .failure()?])?;
+    {
+        use simplelog::{CombinedLogger, Config as LogConfig, LevelFilter, TermLogger};
+        // Create the logger and initialise it.
+        CombinedLogger::init(vec![TermLogger::new(
+            if cfg!(debug_assertions) {
+                // Trace mode for debug compile
+                LevelFilter::Trace
+            } else {
+                // Info mode for release compile
+                LevelFilter::Info
+            },
+            LogConfig::default(),
+        )
+        .failure()?])?;
+    }
 
     // Test logger and inform the user we will now log.
     info!("Logger has been created!");
@@ -48,7 +50,10 @@ fn dll_attach() -> Result<()> {
     // Fetch a GameProcess of CS:GO.
     let mut process = self::process::GameProcess::current_process();
     debug!("this was injected by the crab gang!");
-    debug!("Using HazeDumper data with offset: {}", self::hazedumper::HAZEDUMPER.timestamp);
+    debug!(
+        "Using HazeDumper data with offset: {}",
+        self::hazedumper::HAZEDUMPER.timestamp
+    );
     debug!("GameProcess::pid() => {}", process.pid());
 
     // Fetch the client_panorama module from CS:GO.
