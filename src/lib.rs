@@ -120,24 +120,22 @@ fn dll_attach_wrapper() -> u32 {
         Err(_) => {
             eprintln!("`dll_attach` has panicked");
         }
-        Ok(r) => match r {
-            Ok(()) => {}
-            Err(e) => {
-                eprintln!("`dll_attach` returned an Err: {:#?}", e);
+        Ok(r) => {
+            if let Some(e) = r.err() {
+                eprintln!("`dll_detach` returned an Err: {:#?}", e);
             }
-        },
+        }
     }
 
     match panic::catch_unwind(dll_detach) {
         Err(_) => {
             eprintln!("`dll_detach` has panicked");
         }
-        Ok(r) => match r {
-            Ok(()) => {}
-            Err(e) => {
+        Ok(r) => {
+            if let Some(e) = r.err() {
                 eprintln!("`dll_detach` returned an Err: {:#?}", e);
             }
-        },
+        }
     }
 
     0
@@ -166,12 +164,11 @@ pub extern "stdcall" fn DllMain(
                     Err(e) => {
                         eprintln!("`dll_detach` has panicked: {:#?}", e);
                     }
-                    Ok(r) => match r {
-                        Ok(()) => {}
-                        Err(e) => {
+                    Ok(r) => {
+                        if let Some(e) = r.err() {
                             eprintln!("`dll_detach` returned an Err: {:#?}", e);
                         }
-                    },
+                    }
                 }
             }
         }
