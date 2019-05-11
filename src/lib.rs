@@ -17,9 +17,7 @@ pub mod prelude {
     pub use super::error::*;
 }
 
-fn dll_attach(thread_param: winapi::shared::minwindef::LPVOID) -> Result<()> {
-    let _hinst_dll = thread_param as winapi::shared::minwindef::HINSTANCE;
-
+fn dll_attach() -> Result<()> {
     unsafe {
         // Allocate a console; if the cheat has been injected
         // twice, this will NOT fail and will simply gracefully return,
@@ -98,15 +96,18 @@ fn dll_detach() -> Result<()> {
         unsafe {
             winapi::um::wincon::FreeConsole();
         }
+    } else {
+        // New line so that the next injection doesn't look as horrible
+        println!();
     }
 
     Ok(())
 }
 
-unsafe extern "system" fn dll_attach_wrapper(base: winapi::shared::minwindef::LPVOID) -> u32 {
+fn dll_attach_wrapper() -> u32 {
     use std::panic;
 
-    match panic::catch_unwind(|| dll_attach(base)) {
+    match panic::catch_unwind(dll_attach) {
         Err(_) => {
             eprintln!("`dll_attach` has panicked");
         }
@@ -130,9 +131,7 @@ unsafe extern "system" fn dll_attach_wrapper(base: winapi::shared::minwindef::LP
         },
     }
 
-    winapi::um::libloaderapi::FreeLibraryAndExitThread(base as _, 1);
-
-    unreachable!()
+    0
 }
 
 #[allow(unused_attributes)] // RLS yells at me during debug mode
@@ -145,18 +144,11 @@ pub extern "stdcall" fn DllMain(
     match fdw_reason {
         winapi::um::winnt::DLL_PROCESS_ATTACH => unsafe {
             winapi::um::libloaderapi::DisableThreadLibraryCalls(hinst_dll);
-            winapi::um::processthreadsapi::CreateThread(
-                std::ptr::null_mut(),
-                0,
-                Some(dll_attach_wrapper),
-                hinst_dll as _,
-                0,
-                std::ptr::null_mut(),
-            );
+            std::thread::spawn(dll_attach_wrapper);
         },
         winapi::um::winnt::DLL_PROCESS_DETACH => {
             if !lpv_reserved.is_null() {
-                match std::panic::catch_unwind(|| dll_detach()) {
+                match std::panic::catch_unwind(dll_detach) {
                     Err(e) => {
                         eprintln!("`dll_detach` has panicked: {:#?}", e);
                     }
