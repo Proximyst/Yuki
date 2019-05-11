@@ -11,6 +11,10 @@ pub mod sdk;
 
 use self::prelude::*;
 use log::{debug, info, trace};
+use winapi::{
+    shared::minwindef,
+    um::{consoleapi, wincon},
+};
 
 pub mod prelude {
     pub use super::error::*;
@@ -21,8 +25,8 @@ fn dll_attach() -> Result<()> {
         // Allocate a console; if the cheat has been injected
         // twice, this will NOT fail and will simply gracefully return,
         // allowing us to continue loading.
-        winapi::um::consoleapi::AllocConsole();
-        winapi::um::wincon::SetConsoleTitleA("Yuki Console\0".as_ptr() as *const _);
+        consoleapi::AllocConsole();
+        wincon::SetConsoleTitleA("Yuki Console\0".as_ptr() as *const _);
     }
 
     // Make sure we know the console works.
@@ -99,7 +103,7 @@ fn dll_detach() -> Result<()> {
 
     if !cfg!(debug_assertions) {
         unsafe {
-            winapi::um::wincon::FreeConsole();
+            wincon::FreeConsole();
         }
     } else {
         // New line so that the next injection doesn't look as horrible
@@ -142,18 +146,23 @@ fn dll_attach_wrapper() -> u32 {
 #[allow(unused_attributes)] // RLS yells at me during debug mode
 #[no_mangle]
 pub extern "stdcall" fn DllMain(
-    hinst_dll: winapi::shared::minwindef::HINSTANCE,
-    fdw_reason: winapi::shared::minwindef::DWORD,
-    lpv_reserved: winapi::shared::minwindef::LPVOID,
+    hinst_dll: minwindef::HINSTANCE,
+    fdw_reason: minwindef::DWORD,
+    lpv_reserved: minwindef::LPVOID,
 ) -> i32 {
+    use std::{panic, thread};
+    use winapi::um::{libloaderapi, winnt};
+
     match fdw_reason {
-        winapi::um::winnt::DLL_PROCESS_ATTACH => unsafe {
-            winapi::um::libloaderapi::DisableThreadLibraryCalls(hinst_dll);
-            std::thread::spawn(dll_attach_wrapper);
-        },
-        winapi::um::winnt::DLL_PROCESS_DETACH => {
+        winnt::DLL_PROCESS_ATTACH => {
+            unsafe {
+                libloaderapi::DisableThreadLibraryCalls(hinst_dll);
+            }
+            thread::spawn(dll_attach_wrapper);
+        }
+        winnt::DLL_PROCESS_DETACH => {
             if !lpv_reserved.is_null() {
-                match std::panic::catch_unwind(dll_detach) {
+                match panic::catch_unwind(dll_detach) {
                     Err(e) => {
                         eprintln!("`dll_detach` has panicked: {:#?}", e);
                     }
