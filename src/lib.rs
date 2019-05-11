@@ -1,7 +1,7 @@
 #![feature(abi_thiscall, decl_macro)]
 
-#[cfg(not(target_os = "windows"))]
-compile_error!("this only works for windows");
+#[cfg(any(not(target_os = "windows"), not(target_arch = "x86")))]
+compile_error!("this only works for windows for i686/x86");
 
 pub mod consts;
 pub mod error;
