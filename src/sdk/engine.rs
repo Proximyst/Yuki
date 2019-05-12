@@ -1,5 +1,10 @@
 use super::prelude::*;
-use std::mem::transmute;
+use std::{cell::Cell, mem::transmute, ptr};
+
+thread_local! {
+    static CLANTAG_NAME_FUNC: Cell<*const libc::c_void> = Cell::new(ptr::null());
+}
+type ClantagNameFuncType = unsafe extern "fastcall" fn(*const u8, *const u8) -> i32;
 
 #[repr(isize)]
 pub enum EngineVTableIndicies {
@@ -112,5 +117,38 @@ impl EngineInterface {
         }
 
         Ok(())
+    }
+
+    pub fn set_clantag_and_name(&self, sz_clantag: &str, sz_name: &str) -> Result<i32> {
+        CLANTAG_NAME_FUNC.with(move |r#static| {
+            let fn_ptr = r#static.get();
+            let func: ClantagNameFuncType =
+            if fn_ptr.is_null() {
+                let module = unsafe { &mut **self.inner.parent() };
+                let function_address = unsafe {
+                    module.pattern_scan(&[
+                        Some(0x53),
+                        Some(0x56),
+                        Some(0x57),
+                        Some(0x8B),
+                        Some(0xDA),
+                        Some(0x8B),
+                        Some(0xF9),
+                        Some(0xFF),
+                        Some(0x15),
+                    ])
+                }
+                .failure()?;
+                let function = unsafe {transmute::<_, ClantagNameFuncType>(function_address)};
+                r#static.set(function_address as *const _);
+                function
+            } else {
+                unsafe { transmute::<_, ClantagNameFuncType>(fn_ptr) }
+            };
+
+            unsafe {
+                Ok(func(sz_clantag.as_ptr(), sz_name.as_ptr()))
+            }
+        })
     }
 }

@@ -31,6 +31,7 @@ pub struct Module {
 #[get = "pub"]
 pub struct Interface {
     handle: *const usize,
+    parent: *mut Module,
     methods: usize,
 }
 
@@ -148,7 +149,7 @@ impl Module {
             return Err(ProcessErrorKind::UnknownInterface(interface_name.into()).into());
         }
 
-        Ok(Interface::new(interface))
+        Ok(Interface::new(interface, self as *mut Module))
     }
 
     pub unsafe fn pattern_scan(&mut self, bytes: &[Option<u8>]) -> Option<*mut u8> {
@@ -181,7 +182,7 @@ impl Module {
 }
 
 impl Interface {
-    pub fn new(ptr: *const usize) -> Self {
+    pub fn new(ptr: *const usize, parent: *mut Module) -> Self {
         let vtable = unsafe { *ptr as *const usize };
         let methods = {
             let mut count = 0;
@@ -193,6 +194,7 @@ impl Interface {
 
         Interface {
             handle: ptr,
+            parent,
             methods,
         }
     }
