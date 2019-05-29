@@ -1,4 +1,5 @@
 #![feature(abi_thiscall, decl_macro)]
+#![warn(rust_2018_idioms)]
 
 #[cfg(any(not(target_os = "windows"), not(target_arch = "x86")))]
 compile_error!("this only works for windows for i686/x86");
