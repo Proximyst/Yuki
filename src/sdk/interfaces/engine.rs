@@ -1,5 +1,6 @@
 use super::super::prelude::*;
 use std::{cell::Cell, mem::transmute, ptr};
+use getset::Getters;
 
 thread_local! {
     static CLANTAG_NAME_FUNC: Cell<*const libc::c_void> = Cell::new(ptr::null());
@@ -18,7 +19,8 @@ pub enum EngineVTableIndicies {
     UnrestrictedClientCommand = 114,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Getters)]
+#[get = "pub"]
 pub struct EngineInterface {
     inner: Interface,
 }

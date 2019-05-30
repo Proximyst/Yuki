@@ -1,7 +1,9 @@
 use super::super::prelude::*;
 use std::{ffi::c_void, mem::transmute};
+use getset::Getters;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Getters)]
+#[get = "pub"]
 pub struct ClientModeInterface {
     inner: Interface,
 }

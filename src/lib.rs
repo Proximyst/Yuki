@@ -52,35 +52,91 @@ fn dll_attach() -> Result<()> {
 
     // Test logger and inform the user we will now log.
     info!("Logger has been created!");
+    debug!("this was injected by the crab gang!");
 
     // Fetch a GameProcess of CS:GO.
     let mut process = self::process::GameProcess::current_process();
-    debug!("this was injected by the crab gang!");
     debug!(
         "Using HazeDumper data with offset: {}",
         self::hazedumper::HAZEDUMPER.timestamp
     );
     debug!("GameProcess::pid() => {}", process.pid());
+    info!(
+        "Found the game process with PID: {} at 0x{:X}",
+        process.pid(),
+        *process.base() as usize
+    );
 
     // Fetch the client_panorama module from CS:GO.
-    let mut client = process.get_module("client_panorama.dll")?;
-    trace!("got client! {:?}", client);
+    let mut client_module = process.get_module("client_panorama.dll")?;
+    info!(
+        "Found the client module at 0x{:X}",
+        *client_module.handle() as usize
+    );
     // Make it an interface to the client_panorama module's main inhabitant;
     // namely consts::VCLIENT_INTERFACE_NAME.
     let client_interface = self::sdk::client::ClientInterface::new(
-        client.create_interface(self::consts::VCLIENT_INTERFACE_NAME)?,
+        client_module.create_interface(self::consts::VCLIENT_INTERFACE_NAME)?,
     );
     trace!("got client interface! {:?}", client_interface);
+    info!(
+        "Found the client interface at 0x{:X}",
+        *client_interface.inner().handle() as usize
+    );
 
     // Fetch the engine module from CS:GO.
     let mut engine_module = process.get_module("engine.dll")?;
-    trace!("got engine! {:?}", engine_module);
+    info!(
+        "Found the engine module at 0x{:X}",
+        *engine_module.handle() as usize
+    );
     // Make it an interface to the engine module's main inhabitant;
     // namely consts::ENGINE_INTERFACE_NAME.
     let engine_interface = self::sdk::engine::EngineInterface::new(
         engine_module.create_interface(self::consts::ENGINE_INTERFACE_NAME)?,
     );
     trace!("got engine interface! {:?}", engine_interface);
+    info!(
+        "Found the engine interface at 0x{:X}",
+        *engine_interface.inner().handle() as usize
+    );
+
+    let mut gui_module = process.get_module("vgui2.dll")?;
+    info!(
+        "Found the gui module at 0x{:X}",
+        *gui_module.handle() as usize
+    );
+    let panel_interface = self::sdk::panel::PanelInterface::new(
+        gui_module.create_interface(self::consts::PANEL_INTERFACE_NAME)?,
+    );
+    trace!("got panel interface! {:?}", panel_interface);
+    info!(
+        "Found the panel interface at 0x{:X}",
+        *panel_interface.inner().handle() as usize
+    );
+
+    let client_mode_interface =
+        self::sdk::clientmode::ClientModeInterface::new(self::process::Interface::new(
+            unsafe {
+                **(((*(*client_interface.inner().handle() as *const *const u32)).offset(10)
+                    as *const u8)
+                    .offset(0x5) as *const *const *const usize)
+            },
+            &mut client_module as *mut _,
+        ));
+    info!(
+        "Found the client mode interface at 0x{:X}",
+        *client_interface.inner().handle() as usize
+    );
+
+    let global_vars: &mut self::sdk::defs::c_globalvars::CGlobalVars = unsafe {
+        &mut ***(((*(*client_interface.inner().handle() as *const *const u32)) as *const u8)
+            .offset(0x1Busize as isize)
+            as *const *const *mut self::sdk::defs::c_globalvars::CGlobalVars)
+    };
+    info!("Found the global vars variable at 0x{:X}",
+        global_vars as *mut _ as usize
+    );
 
     // Print some data which is nice to ensure the data read from CS:GO is correct.
     // This also allows us to see whether the basic functionality works.

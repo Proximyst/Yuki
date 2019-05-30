@@ -1,7 +1,9 @@
 use super::super::prelude::*;
 use std::mem::transmute;
+use getset::Getters;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Getters)]
+#[get = "pub"]
 pub struct PanelInterface {
     inner: Interface,
 }
