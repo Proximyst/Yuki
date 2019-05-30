@@ -1,6 +1,6 @@
 //! <https://github.com/ValveSoftware/source-sdk-2013/blob/0d8dceea4310fde5706b3ce1c70609d72a38efdf/mp/src/game/client/cdll_client_int.cpp#L598>
 
-use super::{network::IClientNetworkable, prelude::*};
+use super::super::{network::IClientNetworkable, prelude::*};
 
 #[derive(Debug, Copy, Clone)]
 pub struct ClientInterface {
@@ -300,12 +300,13 @@ pub enum ClientVTableIndicies {
     DispatchUserMessage = 38,
 }
 
+#[derive(Clone, Copy)]
 #[repr(C)]
 pub struct ClientClass {
     create_fn: fn(libc::c_int, libc::c_int) -> *const IClientNetworkable,
     create_event_fn: fn() -> *const IClientNetworkable,
     network_name: *const libc::c_char,
-    recv_table: *mut super::recv_props::RecvTable,
+    recv_table: *mut super::super::recv_props::RecvTable,
     next: *mut ClientClass,
     class_id: ClassIds,
 }

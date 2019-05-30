@@ -1,4 +1,4 @@
-use super::prelude::*;
+use super::super::prelude::*;
 use std::{cell::Cell, mem::transmute, ptr};
 
 thread_local! {

@@ -20,6 +20,8 @@ simplelog = "^0.5"
 
 derive_more = "^0.14"
 
+bitflags = "^1"
+
 [lib]
 name = "yuki"
 crate-type = ["cdylib"]

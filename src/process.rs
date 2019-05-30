@@ -35,11 +35,18 @@ pub struct Module {
 
 #[derive(Getters, Clone, Copy, Debug)]
 #[get = "pub"]
+pub struct VTable {
+    handle: *const usize,
+    methods: usize,
+}
+
+#[derive(Getters, Clone, Copy, Debug)]
+#[get = "pub"]
 pub struct Interface {
     handle: *const usize,
     mut_mem: MutableMemory,
     parent: *mut Module,
-    methods: usize,
+    vtable: VTable,
 }
 
 impl GameProcess {
@@ -180,8 +187,8 @@ impl Module {
     }
 }
 
-impl Interface {
-    pub fn new(ptr: *const usize, parent: *mut Module) -> Self {
+impl VTable {
+    pub fn new(ptr: *const usize) -> Self {
         let vtable = unsafe { *ptr as *const usize };
         let methods = {
             let mut count = 0;
@@ -191,11 +198,32 @@ impl Interface {
             count as usize
         };
 
+        VTable {
+            handle: ptr,
+            methods,
+        }
+    }
+
+    pub fn raw_vtable(&self) -> *const usize {
+        unsafe { *(self.handle) as *const usize }
+    }
+
+    pub fn nth(&self, index: isize) -> Result<*const usize> {
+        if index as usize > self.methods {
+            return Err(InterfaceErrorKind::InvalidVFuncIndex(index).into());
+        }
+
+        Ok(unsafe { self.raw_vtable().offset(index).read() as *const usize })
+    }
+}
+
+impl Interface {
+    pub fn new(ptr: *const usize, parent: *mut Module) -> Self {
         Interface {
             handle: ptr,
             mut_mem: MutableMemory::new(ptr as _),
             parent,
-            methods,
+            vtable: VTable::new(ptr),
         }
     }
 
@@ -211,16 +239,12 @@ impl Interface {
         self.mut_mem.write(offset, value)
     }
 
-    pub fn vtable(&self) -> *const usize {
-        unsafe { *(self.handle) as *const usize }
+    pub fn raw_vtable(&self) -> *const usize {
+        self.vtable.raw_vtable()
     }
 
     pub fn nth(&self, index: isize) -> Result<*const usize> {
-        if index as usize > self.methods {
-            return Err(InterfaceErrorKind::InvalidVFuncIndex(index).into());
-        }
-
-        Ok(unsafe { self.vtable().offset(index).read() as *const usize })
+        self.vtable.nth(index)
     }
 }
 
@@ -233,8 +257,8 @@ pub struct VmtInterface {
 
 impl VmtInterface {
     pub fn new(inner: Interface) -> VmtInterface {
-        let vtable = inner.vtable();
-        let methods = *inner.methods();
+        let vtable = inner.raw_vtable();
+        let methods = *inner.vtable().methods();
 
         let own_table = Vec::with_capacity(methods).as_mut_ptr();
         unsafe {
@@ -261,7 +285,7 @@ impl VmtInterface {
     }
 
     pub fn hook_vfunc(&self, func: *const usize, index: isize) -> Result<()> {
-        if index as usize > *self.inner.methods() {
+        if index as usize > *self.inner.vtable().methods() {
             return Err(InterfaceErrorKind::InvalidVFuncIndex(index).into());
         }
         unsafe {
