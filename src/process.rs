@@ -1,6 +1,12 @@
-use super::prelude::*;
+use super::{mutmemory::MutableMemory, prelude::*};
 use getset::Getters;
-use std::{mem, ptr, convert::{AsRef, AsMut}, ops::Deref, borrow::{Borrow, BorrowMut}};
+use std::{
+    borrow::{Borrow, BorrowMut},
+    convert::{AsMut, AsRef},
+    mem,
+    ops::Deref,
+    ptr,
+};
 use winapi::{
     shared::minwindef,
     um::{libloaderapi, processthreadsapi, winnt},
@@ -16,14 +22,14 @@ pub struct GameProcess {
     handle: winnt::HANDLE,
     pid: u32,
     base: minwindef::HMODULE,
-    base_addr: usize,
+    mut_mem: MutableMemory,
 }
 
 #[derive(Getters, Clone, Copy, Debug)]
 #[get = "pub"]
 pub struct Module {
     handle: minwindef::HMODULE,
-    base_addr: usize,
+    mut_mem: MutableMemory,
     parent: *mut GameProcess,
 }
 
@@ -31,15 +37,12 @@ pub struct Module {
 #[get = "pub"]
 pub struct Interface {
     handle: *const usize,
+    mut_mem: MutableMemory,
     parent: *mut Module,
     methods: usize,
 }
 
 impl GameProcess {
-    fn fix_address(&self, address: usize) -> usize {
-        self.base_addr + address
-    }
-
     pub fn current_process() -> Self {
         unsafe {
             if let Some(g) = CURRENT_PROCESS {
@@ -62,20 +65,20 @@ impl GameProcess {
             handle,
             pid,
             base,
-            base_addr: unsafe { *(base as *mut libc::c_void as *mut u32) } as usize,
+            mut_mem: MutableMemory::new(base as _),
         }
     }
 
-    pub unsafe fn read<T>(&self, address: usize) -> &T {
-        &*(self.fix_address(address) as *const T)
+    pub fn read<T>(&self, offset: isize) -> &T {
+        self.mut_mem.read(offset)
     }
 
-    pub unsafe fn read_mut<T>(&mut self, address: usize) -> &mut T {
-        &mut *(self.fix_address(address) as *mut T)
+    pub fn read_mut<T>(&self, offset: isize) -> &mut T {
+        self.mut_mem.read_mut(offset)
     }
 
-    pub unsafe fn write<T>(&mut self, address: usize, value: T) {
-        *(self.fix_address(address) as *mut T) = value;
+    pub fn write<T>(&self, offset: isize, value: T) {
+        self.mut_mem.write(offset, value)
     }
 
     pub fn get_module(&mut self, module_name: &str) -> Result<Module> {
@@ -89,7 +92,7 @@ impl GameProcess {
 
         let module = Module {
             handle: module,
-            base_addr: unsafe { *(module as *mut libc::c_void as *mut u32) } as usize,
+            mut_mem: MutableMemory::new(module as _),
             parent: self as *mut _,
         };
 
@@ -98,20 +101,16 @@ impl GameProcess {
 }
 
 impl Module {
-    fn fix_offset(&self, offset: usize) -> usize {
-        (self.base_addr as usize) + offset
+    pub fn read<T>(&self, offset: isize) -> &T {
+        self.mut_mem.read(offset)
     }
 
-    pub unsafe fn read<T>(&self, offset: usize) -> &T {
-        &*(self.fix_offset(offset) as *const T)
+    pub fn read_mut<T>(&self, offset: isize) -> &mut T {
+        self.mut_mem.read_mut(offset)
     }
 
-    pub unsafe fn read_mut<T>(&self, offset: usize) -> &mut T {
-        &mut *(self.fix_offset(offset) as *mut T)
-    }
-
-    pub unsafe fn write<T>(&mut self, offset: usize, value: T) {
-        *(self.fix_offset(offset) as *mut T) = value;
+    pub fn write<T>(&self, offset: isize, value: T) {
+        self.mut_mem.write(offset, value)
     }
 
     pub fn get_export(&mut self, export_name: &str) -> Result<minwindef::FARPROC> {
@@ -194,25 +193,22 @@ impl Interface {
 
         Interface {
             handle: ptr,
+            mut_mem: MutableMemory::new(ptr as _),
             parent,
             methods,
         }
     }
 
-    fn fix_offset(&self, offset: usize) -> usize {
-        (self.handle as usize) + offset
+    pub fn read<T>(&self, offset: isize) -> &T {
+        self.mut_mem.read(offset)
     }
 
-    pub unsafe fn read<T>(&self, offset: usize) -> &T {
-        &*(self.fix_offset(offset) as *const T)
+    pub fn read_mut<T>(&self, offset: isize) -> &mut T {
+        self.mut_mem.read_mut(offset)
     }
 
-    pub unsafe fn read_mut<T>(&self, offset: usize) -> &mut T {
-        &mut *(self.fix_offset(offset) as *mut T)
-    }
-
-    pub unsafe fn write<T>(&mut self, offset: usize, value: T) {
-        *(self.fix_offset(offset) as *mut T) = value;
+    pub fn write<T>(&self, offset: isize, value: T) {
+        self.mut_mem.write(offset, value)
     }
 
     pub fn vtable(&self) -> *const usize {
@@ -224,9 +220,7 @@ impl Interface {
             return Err(InterfaceErrorKind::InvalidVFuncIndex(index).into());
         }
 
-        Ok(unsafe {
-            self.vtable().offset(index).read() as *const usize
-        })
+        Ok(unsafe { self.vtable().offset(index).read() as *const usize })
     }
 }
 
@@ -243,7 +237,9 @@ impl VmtInterface {
         let methods = *inner.methods();
 
         let own_table = Vec::with_capacity(methods).as_mut_ptr();
-        unsafe { ptr::copy_nonoverlapping(vtable, own_table, methods); }
+        unsafe {
+            ptr::copy_nonoverlapping(vtable, own_table, methods);
+        }
 
         VmtInterface {
             inner,

@@ -9,6 +9,7 @@ pub mod error;
 pub mod hazedumper;
 pub mod process;
 pub mod sdk;
+pub mod mutmemory;
 
 use self::prelude::*;
 use log::{debug, info, trace};
