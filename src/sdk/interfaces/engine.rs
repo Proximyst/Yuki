@@ -122,8 +122,7 @@ impl EngineInterface {
     pub fn set_clantag_and_name(&self, sz_clantag: &str, sz_name: &str) -> Result<i32> {
         CLANTAG_NAME_FUNC.with(move |r#static| {
             let fn_ptr = r#static.get();
-            let func: ClantagNameFuncType =
-            if fn_ptr.is_null() {
+            let func: ClantagNameFuncType = if fn_ptr.is_null() {
                 let module = unsafe { &mut **self.inner.parent() };
                 let function_address = unsafe {
                     module.pattern_scan(&[
@@ -139,16 +138,14 @@ impl EngineInterface {
                     ])
                 }
                 .failure()?;
-                let function = unsafe {transmute::<_, ClantagNameFuncType>(function_address)};
+                let function = unsafe { transmute::<_, ClantagNameFuncType>(function_address) };
                 r#static.set(function_address as *const _);
                 function
             } else {
                 unsafe { transmute::<_, ClantagNameFuncType>(fn_ptr) }
             };
 
-            unsafe {
-                Ok(func(sz_clantag.as_ptr(), sz_name.as_ptr()))
-            }
+            unsafe { Ok(func(sz_clantag.as_ptr(), sz_name.as_ptr())) }
         })
     }
 }

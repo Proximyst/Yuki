@@ -1,5 +1,5 @@
-use bitflags::bitflags;
 use super::super::math::Vector3D;
+use bitflags::bitflags;
 
 bitflags! {
     #[repr(transparent)]

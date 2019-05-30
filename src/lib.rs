@@ -1,4 +1,4 @@
-#![feature(abi_thiscall, decl_macro)]
+#![feature(abi_thiscall, decl_macro, const_fn)]
 #![warn(rust_2018_idioms)]
 
 #[cfg(any(not(target_os = "windows"), not(target_arch = "x86")))]
@@ -7,9 +7,9 @@ compile_error!("this only works for windows for i686/x86");
 pub mod consts;
 pub mod error;
 pub mod hazedumper;
+pub mod mutmemory;
 pub mod process;
 pub mod sdk;
-pub mod mutmemory;
 
 use self::prelude::*;
 use log::{debug, info, trace};
