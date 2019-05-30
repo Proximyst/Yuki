@@ -126,7 +126,7 @@ fn dll_attach() -> Result<()> {
         ));
     info!(
         "Found the client mode interface at 0x{:X}",
-        *client_interface.inner().handle() as usize
+        *client_mode_interface.inner().handle() as usize
     );
 
     let global_vars: &mut self::sdk::defs::c_globalvars::CGlobalVars = unsafe {
