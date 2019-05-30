@@ -1,7 +1,7 @@
 use failure::{Error as FError, Fail};
 use std::result::Result as StdResult;
 
-pub type Result<T> = StdResult<T, FError>;
+pub type Result<T, E = FError> = StdResult<T, E>;
 
 #[derive(Debug, Fail)]
 pub enum ProcessErrorKind {
