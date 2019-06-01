@@ -1,8 +1,10 @@
 //! <https://github.com/pmrowla/hl2sdk-csgo/blob/master/public/igameevents.h#L65>
 
-use super::super::prelude::*;
-use getset::Getters;
 use std::mem::transmute;
+
+use getset::Getters;
+
+use super::super::prelude::*;
 
 #[derive(Debug, Copy, Clone, Getters)]
 #[get = "pub"]
@@ -222,7 +224,7 @@ impl GameEventInterface {
         value: *const libc::c_char,
     ) -> Result<()> {
         type Func =
-            unsafe extern "thiscall" fn(*const usize, *const libc::c_char, *const libc::c_char);
+        unsafe extern "thiscall" fn(*const usize, *const libc::c_char, *const libc::c_char);
 
         unsafe {
             transmute::<_, Func>(

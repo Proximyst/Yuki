@@ -1,6 +1,8 @@
-use super::super::prelude::*;
-use getset::Getters;
 use std::mem::transmute;
+
+use getset::Getters;
+
+use super::super::prelude::*;
 
 #[derive(Clone, Getters)]
 #[get = "pub"]

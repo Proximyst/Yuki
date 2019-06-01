@@ -1,8 +1,8 @@
 use std::ops;
 
 pub fn clip_number<T>(n: T, lower: T, upper: T) -> T
-where
-    T: PartialOrd,
+    where
+        T: PartialOrd,
 {
     if n < lower {
         return upper;

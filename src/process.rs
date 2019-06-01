@@ -1,18 +1,20 @@
-use super::{mutmemory::MutableMemory, prelude::*};
-use getset::Getters;
 use std::{
     borrow::{Borrow, BorrowMut},
     convert::{AsMut, AsRef},
+    ffi,
     mem,
     ops::Deref,
     ptr,
 };
+
+use getset::Getters;
 use winapi::{
     shared::minwindef,
     um::{libloaderapi, processthreadsapi, winnt},
 };
+use wio::wide::ToWide as _;
 
-pub type ThisCallFn<T> = unsafe extern "thiscall" fn(thisptr: *const usize) -> T;
+use super::{mutmemory::MutableMemory, prelude::*};
 
 static mut CURRENT_PROCESS: Option<GameProcess> = None;
 
@@ -67,7 +69,8 @@ impl GameProcess {
 
     pub fn new(handle: winnt::HANDLE) -> Self {
         let pid = unsafe { processthreadsapi::GetProcessId(handle) };
-        let base = unsafe { libloaderapi::GetModuleHandleA(ptr::null()) };
+        let base = unsafe { libloaderapi::GetModuleHandleW(ptr::null()) };
+
         GameProcess {
             handle,
             pid,
@@ -89,10 +92,10 @@ impl GameProcess {
     }
 
     pub fn get_module(&mut self, module_name: &str) -> Result<Module> {
-        let module_name_null = &format!("{}\0", module_name);
+        let module_name_c = module_name.to_wide_null().as_ptr();
 
         let module =
-            unsafe { libloaderapi::GetModuleHandleA(module_name_null.as_ptr() as *const _) };
+            unsafe { libloaderapi::GetModuleHandleW(module_name_c as *const _) };
         if module.is_null() {
             return Err(ProcessErrorKind::UnknownModule(module_name.into()).into());
         }
@@ -121,9 +124,12 @@ impl Module {
     }
 
     pub fn get_export(&mut self, export_name: &str) -> Result<minwindef::FARPROC> {
-        let export_name_null = &format!("{}\0", export_name);
+        let export_name_null = ffi::CString::new(export_name)?;
         let farproc = unsafe {
-            libloaderapi::GetProcAddress(self.handle, export_name_null.as_ptr() as *const _)
+            libloaderapi::GetProcAddress(
+                self.handle,
+                export_name_null.as_bytes_with_nul().as_ptr() as *const _,
+            )
         };
 
         if farproc.is_null() {
@@ -134,7 +140,7 @@ impl Module {
     }
 
     pub fn create_interface(&mut self, interface_name: &str) -> Result<Interface> {
-        let interface_name_null = &format!("{}\0", interface_name);
+        let interface_name_null = ffi::CString::new(interface_name)?;
         let create_interface = self.get_export("CreateInterface")?;
         let create_interface = unsafe {
             mem::transmute::<
@@ -147,7 +153,7 @@ impl Module {
         };
 
         let interface = unsafe {
-            create_interface(interface_name_null.as_ptr() as *const _, ptr::null_mut())
+            create_interface(interface_name_null.as_bytes_with_nul().as_ptr() as *const _, ptr::null_mut())
                 as *const usize
         };
 
@@ -158,7 +164,7 @@ impl Module {
         Ok(Interface::new(interface, self as *mut Module))
     }
 
-    pub unsafe fn pattern_scan(&mut self, bytes: &[Option<u8>]) -> Option<*mut u8> {
+    pub unsafe fn pattern_scan(&mut self, bytes: &[Option<u8>]) -> Option<*mut ffi::c_void> {
         let dos_header = self.handle as winnt::PIMAGE_DOS_HEADER;
         let nt_headers = (self.handle as *const u8).offset((*dos_header).e_lfanew as _)
             as winnt::PIMAGE_NT_HEADERS;
@@ -180,7 +186,7 @@ impl Module {
                 }
             }
 
-            return Some(scan_bytes.offset(i as isize));
+            return Some(scan_bytes.offset(i as isize) as _);
         }
 
         None
@@ -205,7 +211,7 @@ impl VTable {
     }
 
     pub fn raw_vtable(&self) -> *const usize {
-        unsafe { *(self.handle) as *const usize }
+        unsafe { (*self.handle) as *const usize }
     }
 
     pub fn nth(&self, index: isize) -> Result<*const usize> {
@@ -249,14 +255,14 @@ impl Interface {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct VmtInterface {
+pub struct VmtHookableInterface {
     inner: Interface,
     own_table: *const usize,
     original_table: *const usize,
 }
 
-impl VmtInterface {
-    pub fn new(inner: Interface) -> VmtInterface {
+impl VmtHookableInterface {
+    pub fn new(inner: Interface) -> VmtHookableInterface {
         let vtable = inner.raw_vtable();
         let methods = *inner.vtable().methods();
 
@@ -265,7 +271,7 @@ impl VmtInterface {
             ptr::copy_nonoverlapping(vtable, own_table, methods);
         }
 
-        VmtInterface {
+        VmtHookableInterface {
             inner,
             own_table,
             original_table: vtable,
@@ -295,19 +301,19 @@ impl VmtInterface {
     }
 }
 
-impl AsRef<Interface> for VmtInterface {
+impl AsRef<Interface> for VmtHookableInterface {
     fn as_ref(&self) -> &Interface {
         &self.inner
     }
 }
 
-impl AsMut<Interface> for VmtInterface {
+impl AsMut<Interface> for VmtHookableInterface {
     fn as_mut(&mut self) -> &mut Interface {
         &mut self.inner
     }
 }
 
-impl Deref for VmtInterface {
+impl Deref for VmtHookableInterface {
     type Target = Interface;
 
     fn deref(&self) -> &Interface {
@@ -315,17 +321,18 @@ impl Deref for VmtInterface {
     }
 }
 
-impl Borrow<Interface> for VmtInterface {
+impl Borrow<Interface> for VmtHookableInterface {
     fn borrow(&self) -> &Interface {
         self.as_ref()
     }
 }
 
-impl BorrowMut<Interface> for VmtInterface {
+impl BorrowMut<Interface> for VmtHookableInterface {
     fn borrow_mut(&mut self) -> &mut Interface {
         self.as_mut()
     }
 }
 
-unsafe impl Sync for VmtInterface {}
-unsafe impl Send for VmtInterface {}
+unsafe impl Sync for VmtHookableInterface {}
+
+unsafe impl Send for VmtHookableInterface {}

@@ -1,6 +1,8 @@
-use super::super::prelude::*;
-use getset::Getters;
 use std::{ffi::c_void, mem::transmute};
+
+use getset::Getters;
+
+use super::super::prelude::*;
 
 #[derive(Getters, Copy, Clone)]
 #[get = "pub"]

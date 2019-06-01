@@ -1,6 +1,8 @@
-use super::super::{defs::cliententity::ClientEntity, prelude::*};
-use getset::Getters;
 use std::{ffi::c_void, mem::transmute};
+
+use getset::Getters;
+
+use super::super::{defs::cliententity::ClientEntity, prelude::*};
 
 #[derive(Debug, Copy, Clone, Getters)]
 #[get = "pub"]

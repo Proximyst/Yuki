@@ -1,6 +1,7 @@
+use std::mem::transmute;
+
 use super::super::prelude::*;
 use super::super::Vector3D;
-use std::mem::transmute;
 
 pub struct Collideable {
     base: VTable,

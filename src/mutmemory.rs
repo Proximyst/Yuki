@@ -1,5 +1,6 @@
-use derive_more::Display;
 use std::ffi::c_void;
+
+use derive_more::Display;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display)]
 #[repr(transparent)]
@@ -41,4 +42,5 @@ impl<T> Into<*mut T> for MutableMemory {
 }
 
 unsafe impl Send for MutableMemory {}
+
 unsafe impl Sync for MutableMemory {}

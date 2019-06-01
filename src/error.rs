@@ -1,5 +1,6 @@
-use failure::{Error as FError, Fail};
 use std::result::Result as StdResult;
+
+use failure::{Error as FError, Fail};
 
 pub type Result<T, E = FError> = StdResult<T, E>;
 

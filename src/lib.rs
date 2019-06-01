@@ -1,6 +1,14 @@
 #![feature(abi_thiscall, decl_macro, const_fn, ptr_cast)]
 #![warn(rust_2018_idioms)]
 
+use log::{debug, error, info, trace};
+use winapi::{
+    shared::minwindef,
+    um::{consoleapi, wincon},
+};
+
+use self::prelude::*;
+
 #[cfg(any(not(target_os = "windows"), not(target_arch = "x86")))]
 compile_error!("this only works for windows for i686/x86");
 
@@ -10,13 +18,6 @@ pub mod hazedumper;
 pub mod mutmemory;
 pub mod process;
 pub mod sdk;
-
-use self::prelude::*;
-use log::{debug, error, info, trace};
-use winapi::{
-    shared::minwindef,
-    um::{consoleapi, wincon},
-};
 
 pub mod prelude {
     pub use super::error::*;
@@ -47,7 +48,7 @@ fn dll_attach() -> Result<()> {
             },
             LogConfig::default(),
         )
-        .failure()?])?;
+            .failure()?])?;
     }
 
     // Test logger and inform the user we will now log.
@@ -59,13 +60,13 @@ fn dll_attach() -> Result<()> {
     let mut process: GameProcess = GameProcess::current_process();
     debug!(
         "Using HazeDumper data with offset: {}",
-        self::hazedumper::HAZEDUMPER.timestamp
+        self::hazedumper::HAZEDUMPER.timestamp,
     );
     debug!("GameProcess::pid() => {}", process.pid());
     info!(
         "Found the game process with PID: {} at 0x{:X}",
         process.pid(),
-        *process.base() as usize
+        *process.base() as usize,
     );
 
     use self::sdk::client::ClientInterface;
@@ -73,7 +74,7 @@ fn dll_attach() -> Result<()> {
     let mut client_module = process.get_module("client_panorama.dll")?;
     info!(
         "Found the client module at 0x{:X}",
-        *client_module.handle() as usize
+        *client_module.handle() as usize,
     );
     // Make it an interface to the client_panorama module's main inhabitant;
     // namely consts::VCLIENT_INTERFACE_NAME.
@@ -82,7 +83,7 @@ fn dll_attach() -> Result<()> {
     trace!("got client interface! {:?}", client_interface);
     info!(
         "Found the client interface at 0x{:X}",
-        *client_interface.inner().handle() as usize
+        *client_interface.inner().handle() as usize,
     );
 
     use self::sdk::engine::EngineInterface;
@@ -90,7 +91,7 @@ fn dll_attach() -> Result<()> {
     let mut engine_module = process.get_module("engine.dll")?;
     info!(
         "Found the engine module at 0x{:X}",
-        *engine_module.handle() as usize
+        *engine_module.handle() as usize,
     );
     // Make it an interface to the engine module's main inhabitant;
     // namely consts::ENGINE_INTERFACE_NAME.
@@ -99,21 +100,30 @@ fn dll_attach() -> Result<()> {
     trace!("got engine interface! {:?}", engine_interface);
     info!(
         "Found the engine interface at 0x{:X}",
-        *engine_interface.inner().handle() as usize
+        *engine_interface.inner().handle() as usize,
     );
 
     use self::sdk::panel::PanelInterface;
     let mut gui_module = process.get_module("vgui2.dll")?;
     info!(
         "Found the gui module at 0x{:X}",
-        *gui_module.handle() as usize
+        *gui_module.handle() as usize,
     );
     let panel_interface =
         PanelInterface::new(gui_module.create_interface(self::consts::PANEL_INTERFACE_NAME)?);
     trace!("got panel interface! {:?}", panel_interface);
     info!(
         "Found the panel interface at 0x{:X}",
-        *panel_interface.inner().handle() as usize
+        *panel_interface.inner().handle() as usize,
+    );
+
+    use self::sdk::entitylist::EntityListInterface;
+    let entitylist_interface =
+        EntityListInterface::new(client_module.create_interface(self::consts::ENTITYLIST_INTERFACE_NAME)?);
+    trace!("got entity list interface! {:?}", entitylist_interface);
+    info!(
+        "Found the entity list interface at 0x{:X}",
+        *entitylist_interface.inner().handle() as usize,
     );
 
     use self::sdk::clientmode::ClientModeInterface;
@@ -126,7 +136,7 @@ fn dll_attach() -> Result<()> {
     ));
     info!(
         "Found the client mode interface at 0x{:X}",
-        *client_mode_interface.inner().handle() as usize
+        *client_mode_interface.inner().handle() as usize,
     );
 
     use self::sdk::defs::c_globalvars::CGlobalVars;
@@ -136,7 +146,19 @@ fn dll_attach() -> Result<()> {
     };
     info!(
         "Found the global vars variable at 0x{:X}",
-        global_vars as *mut _ as usize
+        global_vars as *mut _ as usize,
+    );
+
+    use self::sdk::defs::clientstate::ClientState;
+    let client_state: &mut ClientState = unsafe {
+        &mut ***(engine_module.pattern_scan(
+            &[Some(0xA1), None, None, None, None, Some(0x8B), Some(0x80),
+                None, None, None, None, Some(0xC3)]
+        ).failure()?.offset(1) as *mut *mut *mut ClientState)
+    };
+    info!(
+        "Found client state variable at 0x{:X}",
+        client_state as *mut _ as usize,
     );
 
     // Print some data which is nice to ensure the data read from CS:GO is correct.
@@ -154,6 +176,7 @@ fn dll_attach() -> Result<()> {
         engine_interface.get_screen_size()
     );
     debug!("CGlobalVars::client => {}", global_vars.client);
+    debug!("ClientState::is_paused => {}", client_state.is_paused());
 
     Ok(())
 }
@@ -205,7 +228,8 @@ fn dll_attach_wrapper(hinst_dll: SendableContainer<minwindef::HINSTANCE>) {
 
 #[allow(unused_attributes)] // RLS yells at me during debug mode
 #[no_mangle]
-pub extern "stdcall" fn DllMain(
+#[export_name = "DllMain"]
+pub extern "stdcall" fn dll_main(
     hinst_dll: minwindef::HINSTANCE,
     fdw_reason: minwindef::DWORD,
     lpv_reserved: minwindef::LPVOID,
@@ -244,4 +268,5 @@ pub extern "stdcall" fn DllMain(
 struct SendableContainer<T>(pub T);
 
 unsafe impl<T> Send for SendableContainer<T> {}
+
 unsafe impl<T> Sync for SendableContainer<T> {}

@@ -1,8 +1,10 @@
 //! <https://github.com/ValveSoftware/source-sdk-2013/blob/0d8dceea4310fde5706b3ce1c70609d72a38efdf/mp/src/game/client/cdll_client_int.cpp#L598>
 
-use super::super::prelude::*;
 use std::{ffi::c_void, mem::transmute};
+
 use getset::Getters;
+
+use super::super::prelude::*;
 
 #[derive(Debug, Copy, Clone, Getters)]
 #[get = "pub"]
@@ -338,7 +340,7 @@ impl ClientInterface {
         data: *mut libc::c_void,
     ) -> Result<bool> {
         type Func =
-            unsafe extern "thiscall" fn(*const usize, i32, i32, i32, *const libc::c_void) -> bool;
+        unsafe extern "thiscall" fn(*const usize, i32, i32, i32, *const libc::c_void) -> bool;
 
         Ok(unsafe {
             transmute::<_, Func>(

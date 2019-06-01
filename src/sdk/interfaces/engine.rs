@@ -1,6 +1,8 @@
-use super::super::prelude::*;
 use std::{cell::Cell, mem::transmute, ptr};
+
 use getset::Getters;
+
+use super::super::prelude::*;
 
 thread_local! {
     static CLANTAG_NAME_FUNC: Cell<*const libc::c_void> = Cell::new(ptr::null());
@@ -139,7 +141,7 @@ impl EngineInterface {
                         Some(0x15),
                     ])
                 }
-                .failure()?;
+                    .failure()?;
                 let function = unsafe { transmute::<_, ClantagNameFuncType>(function_address) };
                 r#static.set(function_address as *const _);
                 function

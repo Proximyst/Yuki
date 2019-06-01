@@ -9,6 +9,7 @@ build = "build.rs"
 imgui = "^0.0"
 
 winapi = { version = "^0.3", features = ["std", "everything"] }
+wio = "^0.2"
 libc = { version = "^0.2", features = ["use_std", "extra_traits"] }
 
 getset = "^0.0"
