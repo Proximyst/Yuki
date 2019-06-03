@@ -4,6 +4,7 @@ pub mod clientmode;
 pub mod engine;
 pub mod entitylist;
 pub mod gameevent;
+pub mod input;
 pub mod localize;
 pub mod panel;
 pub mod v_debug_overlay;
