@@ -5,3 +5,4 @@ pub mod engine;
 pub mod entitylist;
 pub mod panel;
 pub mod gameevent;
+pub mod v_debug_overlay;
