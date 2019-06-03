@@ -245,20 +245,6 @@ pub extern "stdcall" fn dll_main(
             let container = SendableContainer(hinst_dll);
             thread::spawn(move || dll_attach_wrapper(container));
         }
-        winnt::DLL_PROCESS_DETACH => {
-            if !lpv_reserved.is_null() {
-                match panic::catch_unwind(dll_detach) {
-                    Err(e) => {
-                        eprintln!("`dll_detach` has panicked: {:#?}", e);
-                    }
-                    Ok(r) => {
-                        if let Some(e) = r.err() {
-                            eprintln!("`dll_detach` returned an Err: {:#?}", e);
-                        }
-                    }
-                }
-            }
-        }
         _ => {}
     }
 
