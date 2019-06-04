@@ -1,7 +1,4 @@
-use std::{
-    ffi::{c_void, OsString},
-    mem::transmute,
-};
+use std::{ffi::OsString, mem::transmute};
 
 use getset::Getters;
 use wio::wide::FromWide as _;
@@ -34,6 +31,6 @@ impl LocalizeInterface {
             )
         };
 
-        Ok(OsString::from_wide_null(ptr))
+        Ok(unsafe { OsString::from_wide_ptr_null(ptr) })
     }
 }

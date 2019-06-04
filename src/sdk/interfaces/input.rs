@@ -1,4 +1,4 @@
-use std::{ffi::c_void, mem::transmute};
+use std::mem::transmute;
 
 use getset::Getters;
 
