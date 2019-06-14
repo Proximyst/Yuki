@@ -5,6 +5,7 @@ use super::super::math::Vector3D;
 bitflags! {
     #[repr(transparent)]
     pub struct CmdButtons: i32 {
+        #[allow(clippy::identity_op)]
         const IN_ATTACK = 1 << 0;
         const IN_JUMP = 1 << 1;
         const IN_DUCK = 1 << 2;
@@ -191,8 +192,8 @@ pub enum MouseCodeState {
 }
 
 impl ButtonCode {
-    pub fn to_i32(&self) -> i32 {
-        *self as i32
+    pub fn to_i32(self) -> i32 {
+        self as i32
     }
 
     pub fn from_i32(i: i32) -> Option<ButtonCode> {

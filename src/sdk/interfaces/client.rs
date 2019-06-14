@@ -340,7 +340,7 @@ impl ClientInterface {
         data: *mut libc::c_void,
     ) -> Result<bool> {
         type Func =
-        unsafe extern "thiscall" fn(*const usize, i32, i32, i32, *const libc::c_void) -> bool;
+            unsafe extern "thiscall" fn(*const usize, i32, i32, i32, *const libc::c_void) -> bool;
 
         Ok(unsafe {
             transmute::<_, Func>(

@@ -1,11 +1,11 @@
 use std::ffi::c_void;
 
 pub type RecvVarProxyFn =
-fn(data: *const CRecvProxyData, struct_ptr: *mut c_void, out_ptr: *mut c_void);
+    fn(data: *const CRecvProxyData, struct_ptr: *mut c_void, out_ptr: *mut c_void);
 pub type ArrayLengthRecvProxyFn =
-fn(struct_ptr: *mut c_void, object_id: i32, current_array_length: i32);
+    fn(struct_ptr: *mut c_void, object_id: i32, current_array_length: i32);
 pub type DataTableRecvVarProxyFn =
-fn(prop: *const RecvProp, out_ptr: *mut *mut c_void, data_ptr: *mut c_void, object_id: i32);
+    fn(prop: *const RecvProp, out_ptr: *mut *mut c_void, data_ptr: *mut c_void, object_id: i32);
 
 #[repr(i32)]
 pub enum SendPropType {

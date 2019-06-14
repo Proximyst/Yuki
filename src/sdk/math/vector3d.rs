@@ -1,8 +1,8 @@
 use std::ops;
 
 pub fn clip_number<T>(n: T, lower: T, upper: T) -> T
-    where
-        T: PartialOrd,
+where
+    T: PartialOrd,
 {
     if n < lower {
         return upper;
@@ -37,7 +37,7 @@ impl Vector3D {
     }
 
     pub fn normalized(&self) -> Self {
-        let mut to_norm = self.clone();
+        let mut to_norm = *self;
         to_norm.normalize();
         to_norm
     }
@@ -62,12 +62,14 @@ impl Vector3D {
 
     fn normalize_vector(vec: &mut Vector3D) -> f32 {
         let length = vec.length_sqrt();
+
         *vec = if length != 0.0 {
             Vector3D::new(vec.x / length, vec.y / length, vec.z / length)
         } else {
             Vector3D::new(0.0, 0.0, 1.0)
         };
-        return length;
+
+        length
     }
 }
 

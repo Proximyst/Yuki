@@ -1,8 +1,7 @@
 use std::{
     borrow::{Borrow, BorrowMut},
     convert::{AsMut, AsRef},
-    ffi,
-    mem,
+    ffi, mem,
     ops::Deref,
     ptr,
 };
@@ -79,23 +78,22 @@ impl GameProcess {
         }
     }
 
-    pub fn read<T>(&self, offset: isize) -> &T {
-        self.mut_mem.read(offset)
+    pub fn read<'a, T>(self, offset: isize) -> &'a T {
+        self.mut_mem.read::<'a, T>(offset)
     }
 
-    pub fn read_mut<T>(&self, offset: isize) -> &mut T {
-        self.mut_mem.read_mut(offset)
+    pub fn read_mut<'a, T>(self, offset: isize) -> &'a mut T {
+        self.mut_mem.read_mut::<'a, T>(offset)
     }
 
-    pub fn write<T>(&self, offset: isize, value: T) {
+    pub fn write<T>(self, offset: isize, value: T) {
         self.mut_mem.write(offset, value)
     }
 
     pub fn get_module(&mut self, module_name: &str) -> Result<Module> {
         let module_name_c = module_name.to_wide_null().as_ptr();
 
-        let module =
-            unsafe { libloaderapi::GetModuleHandleW(module_name_c as *const _) };
+        let module = unsafe { libloaderapi::GetModuleHandleW(module_name_c as *const _) };
         if module.is_null() {
             return Err(ProcessErrorKind::UnknownModule(module_name.into()).into());
         }
@@ -111,12 +109,12 @@ impl GameProcess {
 }
 
 impl Module {
-    pub fn read<T>(&self, offset: isize) -> &T {
-        self.mut_mem.read(offset)
+    pub fn read<'a, T>(self, offset: isize) -> &'a T {
+        self.mut_mem.read::<'a, T>(offset)
     }
 
-    pub fn read_mut<T>(&self, offset: isize) -> &mut T {
-        self.mut_mem.read_mut(offset)
+    pub fn read_mut<'a, T>(self, offset: isize) -> &'a mut T {
+        self.mut_mem.read_mut::<'a, T>(offset)
     }
 
     pub fn write<T>(&self, offset: isize, value: T) {
@@ -153,8 +151,10 @@ impl Module {
         };
 
         let interface = unsafe {
-            create_interface(interface_name_null.as_bytes_with_nul().as_ptr() as *const _, ptr::null_mut())
-                as *const usize
+            create_interface(
+                interface_name_null.as_bytes_with_nul().as_ptr() as *const _,
+                ptr::null_mut(),
+            ) as *const usize
         };
 
         if interface.is_null() {
@@ -164,6 +164,7 @@ impl Module {
         Ok(Interface::new(interface, self as *mut Module))
     }
 
+    #[allow(clippy::cast_ptr_alignment)]
     pub unsafe fn pattern_scan(&mut self, bytes: &[Option<u8>]) -> Option<*mut ffi::c_void> {
         let dos_header = self.handle as winnt::PIMAGE_DOS_HEADER;
         let nt_headers = (self.handle as *const u8).offset((*dos_header).e_lfanew as _)
@@ -175,18 +176,18 @@ impl Module {
         let bytes_len = bytes.len();
 
         'a: for i in 0..(image_size as usize - bytes_len) {
-            for j in 0..bytes_len {
-                let byte = match bytes[j] {
+            for (j, byte) in bytes.iter().enumerate() {
+                let byte = match byte {
                     None => continue,
-                    Some(s) => s,
+                    Some(s) => *s,
                 };
 
-                if *scan_bytes.offset((i + j) as isize) != byte {
+                if *scan_bytes.add(i + j) != byte {
                     continue 'a;
                 }
             }
 
-            return Some(scan_bytes.offset(i as isize) as _);
+            return Some(scan_bytes.add(i) as _);
         }
 
         None
@@ -210,11 +211,11 @@ impl VTable {
         }
     }
 
-    pub fn raw_vtable(&self) -> *const usize {
-        unsafe { (*self.handle) as *const usize }
+    pub fn raw_vtable(self) -> *const usize {
+        unsafe { *(self.handle as *const *const usize) }
     }
 
-    pub fn nth(&self, index: isize) -> Result<*const usize> {
+    pub fn nth(self, index: isize) -> Result<*const usize> {
         if index as usize > self.methods {
             return Err(InterfaceErrorKind::InvalidVFuncIndex(index).into());
         }
@@ -233,23 +234,23 @@ impl Interface {
         }
     }
 
-    pub fn read<T>(&self, offset: isize) -> &T {
-        self.mut_mem.read(offset)
+    pub fn read<'a, T>(self, offset: isize) -> &'a T {
+        self.mut_mem.read::<'a, T>(offset)
     }
 
-    pub fn read_mut<T>(&self, offset: isize) -> &mut T {
-        self.mut_mem.read_mut(offset)
+    pub fn read_mut<'a, T>(self, offset: isize) -> &'a mut T {
+        self.mut_mem.read_mut::<'a, T>(offset)
     }
 
-    pub fn write<T>(&self, offset: isize, value: T) {
+    pub fn write<T>(self, offset: isize, value: T) {
         self.mut_mem.write(offset, value)
     }
 
-    pub fn raw_vtable(&self) -> *const usize {
+    pub fn raw_vtable(self) -> *const usize {
         self.vtable.raw_vtable()
     }
 
-    pub fn nth(&self, index: isize) -> Result<*const usize> {
+    pub fn nth(self, index: isize) -> Result<*const usize> {
         self.vtable.nth(index)
     }
 }

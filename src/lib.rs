@@ -1,5 +1,7 @@
 #![feature(abi_thiscall, decl_macro, const_fn, ptr_cast)]
 #![warn(rust_2018_idioms)]
+#![warn(clippy::all)]
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
 
 use log::{debug, error, info, trace};
 use winapi::{
@@ -23,6 +25,7 @@ pub mod prelude {
     pub use super::error::*;
 }
 
+#[allow(clippy::cognitive_complexity)]
 fn dll_attach() -> Result<()> {
     unsafe {
         // Allocate a console; if the cheat has been injected
@@ -48,7 +51,7 @@ fn dll_attach() -> Result<()> {
             },
             LogConfig::default(),
         )
-            .failure()?])?;
+        .failure()?])?;
     }
 
     // Test logger and inform the user we will now log.
@@ -118,8 +121,9 @@ fn dll_attach() -> Result<()> {
     );
 
     use self::sdk::entitylist::EntityListInterface;
-    let entitylist_interface =
-        EntityListInterface::new(client_module.create_interface(self::consts::ENTITYLIST_INTERFACE_NAME)?);
+    let entitylist_interface = EntityListInterface::new(
+        client_module.create_interface(self::consts::ENTITYLIST_INTERFACE_NAME)?,
+    );
     trace!("got entity list interface! {:?}", entitylist_interface);
     info!(
         "Found the entity list interface at 0x{:X}",
@@ -150,6 +154,7 @@ fn dll_attach() -> Result<()> {
     );
 
     use self::sdk::defs::clientstate::ClientState;
+    #[rustfmt::skip]
     let client_state: &mut ClientState = unsafe {
         &mut ***(engine_module.pattern_scan(
             &[Some(0xA1), None, None, None, None, Some(0x8B), Some(0x80),
@@ -196,63 +201,54 @@ fn dll_detach() -> Result<()> {
     Ok(())
 }
 
-fn dll_attach_wrapper(hinst_dll: SendableContainer<minwindef::HINSTANCE>) {
-    use std::panic;
-
-    match panic::catch_unwind(dll_attach) {
-        Err(_) => {
-            error!("`dll_attach` has panicked");
-        }
-        Ok(r) => {
-            if let Some(e) = r.err() {
-                error!("`dll_attach` has returned an Err: {:#?}", e);
-            }
-        }
-    }
-
-    match panic::catch_unwind(dll_detach) {
-        Err(_) => {
-            error!("`dll_detach` has panicked");
-        }
-        Ok(r) => {
-            if let Some(e) = r.err() {
-                error!("`dll_detach` has returned an Err: {:#?}", e);
-            }
-        }
-    }
-
-    unsafe {
-        winapi::um::libloaderapi::FreeLibraryAndExitThread(hinst_dll.0, 0);
-    }
-}
-
 #[allow(unused_attributes)] // RLS yells at me during debug mode
 #[no_mangle]
 #[export_name = "DllMain"]
 pub extern "stdcall" fn dll_main(
     hinst_dll: minwindef::HINSTANCE,
     fdw_reason: minwindef::DWORD,
-    lpv_reserved: minwindef::LPVOID,
+    _lpv_reserved: minwindef::LPVOID,
 ) -> i32 {
+    struct SendableContainer<T>(pub T);
+    unsafe impl<T> Send for SendableContainer<T> {}
+    unsafe impl<T> Sync for SendableContainer<T> {}
+
     use std::{panic, thread};
     use winapi::um::{libloaderapi, winnt};
 
-    match fdw_reason {
-        winnt::DLL_PROCESS_ATTACH => {
-            unsafe {
-                libloaderapi::DisableThreadLibraryCalls(hinst_dll);
-            }
-            let container = SendableContainer(hinst_dll);
-            thread::spawn(move || dll_attach_wrapper(container));
+    if let winnt::DLL_PROCESS_ATTACH = fdw_reason {
+        unsafe {
+            libloaderapi::DisableThreadLibraryCalls(hinst_dll);
         }
-        _ => {}
+        let container = SendableContainer(hinst_dll);
+        thread::spawn(move || {
+            match panic::catch_unwind(dll_attach) {
+                Err(_) => {
+                    error!("`dll_attach` has panicked");
+                }
+                Ok(r) => {
+                    if let Some(e) = r.err() {
+                        error!("`dll_attach` has returned an Err: {:#?}", e);
+                    }
+                }
+            }
+
+            match panic::catch_unwind(dll_detach) {
+                Err(_) => {
+                    error!("`dll_detach` has panicked");
+                }
+                Ok(r) => {
+                    if let Some(e) = r.err() {
+                        error!("`dll_detach` has returned an Err: {:#?}", e);
+                    }
+                }
+            }
+
+            unsafe {
+                winapi::um::libloaderapi::FreeLibraryAndExitThread(container.0, 0);
+            }
+        });
     }
 
     true as i32
 }
-
-struct SendableContainer<T>(pub T);
-
-unsafe impl<T> Send for SendableContainer<T> {}
-
-unsafe impl<T> Sync for SendableContainer<T> {}

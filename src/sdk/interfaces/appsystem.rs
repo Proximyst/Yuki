@@ -47,23 +47,27 @@ impl AppSystemInterface {
     pub fn disconnect(&self) -> Result<()> {
         type Func = unsafe extern "thiscall" fn(*const usize);
 
-        Ok(unsafe {
+        unsafe {
             transmute::<_, Func>(
                 self.inner
                     .nth(AppSystemVTableIndicies::Disconnect as isize)?,
-            )(*self.inner.handle())
-        })
+            )(*self.inner.handle());
+        }
+
+        Ok(())
     }
 
     pub fn query_interface(&self, interface_name: *const libc::c_char) -> Result<()> {
         type Func = unsafe extern "thiscall" fn(*const usize, *const libc::c_char);
 
-        Ok(unsafe {
+        unsafe {
             transmute::<_, Func>(
                 self.inner
                     .nth(AppSystemVTableIndicies::QueryInterface as isize)?,
-            )(*self.inner.handle(), interface_name)
-        })
+            )(*self.inner.handle(), interface_name);
+        }
+
+        Ok(())
     }
 
     pub fn init(&self) -> Result<i32 /* InitReturnVal_t */> {
@@ -75,14 +79,17 @@ impl AppSystemInterface {
             )
         })
     }
+
     pub fn shutdown(&self) -> Result<()> {
         type Func = unsafe extern "thiscall" fn(*const usize);
 
-        Ok(unsafe {
+        unsafe {
             transmute::<_, Func>(self.inner.nth(AppSystemVTableIndicies::Shutdown as isize)?)(
                 *self.inner.handle(),
-            )
-        })
+            );
+        }
+
+        Ok(())
     }
 
     pub fn get_dependencies(&self) -> Result<*const c_void /* AppSystemInfo_t */> {
@@ -117,21 +124,25 @@ impl AppSystemInterface {
             *const libc::c_char,
         );
 
-        Ok(unsafe {
+        unsafe {
             transmute::<_, Func>(
                 self.inner
                     .nth(AppSystemVTableIndicies::Reconnect as isize)?,
-            )(*self.inner.handle(), factory, interface_name)
-        })
+            )(*self.inner.handle(), factory, interface_name);
+        }
+
+        Ok(())
     }
 
     pub fn unk_func(&self) -> Result<()> {
         type Func = unsafe extern "thiscall" fn(*const usize);
 
-        Ok(unsafe {
+        unsafe {
             transmute::<_, Func>(self.inner.nth(AppSystemVTableIndicies::UnkFunc as isize)?)(
                 *self.inner.handle(),
-            )
-        })
+            );
+        }
+
+        Ok(())
     }
 }

@@ -34,8 +34,10 @@ impl EngineInterface {
 
     pub fn get_screen_size(&self) -> Result<(i32, i32)> {
         type Func = unsafe extern "thiscall" fn(*const usize, *mut i32, *mut i32) -> i32;
+
         let mut width = 0;
         let mut height = 0;
+
         unsafe {
             let _ =
                 transmute::<_, Func>(self.inner.nth(EngineVTableIndicies::ScreenSize as isize)?)(
@@ -141,7 +143,7 @@ impl EngineInterface {
                         Some(0x15),
                     ])
                 }
-                    .failure()?;
+                .failure()?;
                 let function = unsafe { transmute::<_, ClantagNameFuncType>(function_address) };
                 r#static.set(function_address as *const _);
                 function

@@ -224,7 +224,7 @@ impl GameEventInterface {
         value: *const libc::c_char,
     ) -> Result<()> {
         type Func =
-        unsafe extern "thiscall" fn(*const usize, *const libc::c_char, *const libc::c_char);
+            unsafe extern "thiscall" fn(*const usize, *const libc::c_char, *const libc::c_char);
 
         unsafe {
             transmute::<_, Func>(

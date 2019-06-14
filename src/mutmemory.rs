@@ -14,15 +14,15 @@ impl MutableMemory {
         MutableMemory { base }
     }
 
-    pub fn read<T>(&self, offset: isize) -> &T {
+    pub fn read<'a, T>(self, offset: isize) -> &'a T {
         unsafe { &*(self.base.offset(offset) as *mut T as *const _) }
     }
 
-    pub fn read_mut<T>(&self, offset: isize) -> &mut T {
+    pub fn read_mut<'a, T>(self, offset: isize) -> &'a mut T {
         unsafe { &mut *(self.base.offset(offset) as *mut T) }
     }
 
-    pub fn write<T>(&self, offset: isize, value: T) {
+    pub fn write<T>(self, offset: isize, value: T) {
         unsafe {
             *(self.base.offset(offset) as *mut T) = value;
         }

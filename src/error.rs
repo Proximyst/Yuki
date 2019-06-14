@@ -43,6 +43,6 @@ pub trait OptionExt<T> {
 
 impl<T> OptionExt<T> for Option<T> {
     fn failure(self) -> Result<T> {
-        self.ok_or(StdErrorKind::None.into())
+        self.ok_or_else(|| StdErrorKind::None.into())
     }
 }
