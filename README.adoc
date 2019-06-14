@@ -7,6 +7,18 @@ v1.0
 In its current state, it serves no more purpose than being a basic base for
 further development.
 
+== Development
+
+To start developing, you only need to do the following:
+
+. `git clone git@github.com:Proximyst/Yuki.git`
+. `cd Yuki`
+. Open a work environment and start working at it
+
+It is highly encouraged that you link `pre-commit` to `.git/hooks/pre-commit`,
+e.g. by using `New-Item -ItemType SymbolicLink -Path pre-commit -Target .git\hooks\pre-commit`
+in an elevated PowerShell.
+
 == Licence
 
 The project is licensed under the link:LICENCE[BSD 3-Clause Licence], and is as

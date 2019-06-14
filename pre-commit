@@ -1,0 +1,2 @@
+#!/bin/sh
+./fetch-hazedumper.sh > /dev/null
